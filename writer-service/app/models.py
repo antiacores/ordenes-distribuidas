@@ -1,8 +1,8 @@
 ## Modelo ORM (Order)
 
 from datetime import datetime, timezone
-from sqalchemy import String, JSON, DateTime
-from sqalchemy.orm import Mapped, mapped_column
+from sqlalchemy import String, JSON, DateTime
+from sqlalchemy.orm import Mapped, mapped_column
 from app.db import Base
 
 class Order(Base):

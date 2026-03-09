@@ -5,7 +5,7 @@ from typing import List
 
 class OrderItem(BaseModel):
     sku: str
-    quantity: int
+    qty: int
 
 class CreateOrderRequest(BaseModel):
     customer: str
