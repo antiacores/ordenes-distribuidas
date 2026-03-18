@@ -24,6 +24,15 @@ services:
       interval: 5s
       retries: 5
 
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      retries: 10
 
   api-gateway:
     build: ./api-gateway
@@ -45,6 +54,36 @@ services:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+
+  order-service:
+    build: ./order-service
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  inventory-service:
+    build: ./inventory-service
+    env_file: .env
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  notification-service:
+    build: ./notification-service
+    env_file: .env
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  analytics-service:
+    build: ./analytics-service
+    env_file: .env
+    depends_on:
+      rabbitmq:
         condition: service_healthy
 
 volumes:
