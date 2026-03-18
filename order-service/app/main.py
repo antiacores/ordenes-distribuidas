@@ -49,7 +49,7 @@ async def main():
         except Exception as e:
             print(f"Error: {e}")
 
-        await.asyncio.sleep(3)
+        await asyncio.sleep(3)
 
 if __name__ == "__main__":
     asyncio.run(main())

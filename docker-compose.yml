@@ -59,6 +59,8 @@ services:
   order-service:
     build: ./order-service
     env_file: .env
+    environment:
+      PYTHONUNBUFFERED: "1"
     depends_on:
       postgres:
         condition: service_healthy
@@ -68,6 +70,8 @@ services:
   inventory-service:
     build: ./inventory-service
     env_file: .env
+    environment:
+      PYTHONUNBUFFERED: "1"
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -75,6 +79,8 @@ services:
   notification-service:
     build: ./notification-service
     env_file: .env
+    environment:
+      PYTHONUNBUFFERED: "1"
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -82,6 +88,8 @@ services:
   analytics-service:
     build: ./analytics-service
     env_file: .env
+    environment:
+      PYTHONUNBUFFERED: "1"
     depends_on:
       rabbitmq:
         condition: service_healthy

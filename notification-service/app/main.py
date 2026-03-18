@@ -20,7 +20,7 @@ def send_email(to: str, order_id: str, items: list):
     with smtplib.SMTP(settings.smtp_host, settings.smtp_port) as server:
         server.starttls()
         server.login(settings.smtp_user, settings.smtp_password)
-        server.send_email(settings.smtp_from, to, msg.as_string())
+        server.sendmail(settings.smtp_from, to, msg.as_string())
 
 async def handle_order(message: aio_pika.IncomingMessage):
     async with message.process():
