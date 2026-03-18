@@ -1,0 +1,4 @@
+aio-pika>=9,<10
+sqlalchemy[asyncio]>=2,<3
+asyncpg>=0.29,<1
+pydantic-settings>=2,<3
