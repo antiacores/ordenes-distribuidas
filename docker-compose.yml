@@ -15,6 +15,21 @@ services:
       interval: 5s
       retries: 5
 
+  postgres-notifications:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: notifications_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - pg_notifications_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d notifications_db"]
+      interval: 5s
+      retries: 5
+
   redis:
     image: redis:7-alpine
     ports:
@@ -39,30 +54,23 @@ services:
     ports:
       - "8000:8000"
     env_file: .env
+    environment:
+      PYTHONUNBUFFERED: "1"
     depends_on:
       redis:
         condition: service_healthy
-      writer-service:
-        condition: service_started
+      rabbitmq:
+        condition: service_healthy
 
   writer-service:
     build: ./writer-service
-    ports:
-      - "8001:8001"
-    env_file: .env
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
-  order-service:
-    build: ./order-service
     env_file: .env
     environment:
       PYTHONUNBUFFERED: "1"
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
@@ -73,6 +81,8 @@ services:
     environment:
       PYTHONUNBUFFERED: "1"
     depends_on:
+      postgres:
+        condition: service_healthy
       rabbitmq:
         condition: service_healthy
 
@@ -82,6 +92,8 @@ services:
     environment:
       PYTHONUNBUFFERED: "1"
     depends_on:
+      postgres-notifications:
+        condition: service_healthy
       rabbitmq:
         condition: service_healthy
 
@@ -96,3 +108,4 @@ services:
 
 volumes:
   pg_data:
+  pg_notifications_data:

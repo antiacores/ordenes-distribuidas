@@ -5,34 +5,27 @@ from datetime import datetime, timezone
 from fastapi import FastAPI, HTTPException
 from app.schemas import CreateOrderRequest
 from app.redis_client import r
-from app.services.writer_client import send_to_writer
+from app.rabbitmq_publisher import publish_order_created
 
 app = FastAPI()
 
-@app.post("/orders")
+@app.post("/orders", status_code=202)
 async def create_order(body: CreateOrderRequest):
     order_id = str(uuid.uuid4())
-    request_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
 
-    await r.hset(f"order:{order_id}", mapping = {
-        "status": "RECEIVED", 
+    await r.hset(f"order:{order_id}", mapping={
+        "status": "RECEIVED",
         "last_updated": now,
-        })
-    
-    payload = {
+    })
+
+    event = {
         "order_id": order_id,
         "customer": body.customer,
-        "items": [items.model_dump() for items in body.items],
+        "items": [item.model_dump() for item in body.items],
     }
 
-    success = await send_to_writer(order_id, request_id, payload)
-
-    if not success:
-        await r.hset(f"order:{order_id}", mapping = {
-            "status": "FAILED",
-            "last_updated": datetime.now(timezone.utc).isoformat(),
-        })
+    await publish_order_created(event)
 
     return {"order_id": order_id, "status": "RECEIVED"}
 
@@ -41,8 +34,8 @@ async def get_order(order_id: str):
     data = await r.hgetall(f"order:{order_id}")
 
     if not data:
-        raise HTTPException(status_code = 404, detail = "Orden no encontrada")
-    
+        raise HTTPException(status_code=404, detail="Orden no encontrada")
+
     return {
         "order_id": order_id,
         "status": data.get("status"),

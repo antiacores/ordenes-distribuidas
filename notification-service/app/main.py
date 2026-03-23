@@ -1,53 +1,96 @@
-import asyncio
 import json
 import smtplib
+import pika
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-import aio_pika
-from app.config import settings
+from app.db import SessionLocal, init_db
+from app.models import Notification
+import os
 
-def send_email(to: str, order_id: str, items: list):
+RABBITMQ_URL = os.getenv("RABBITMQ_URL", "amqp://guest:guest@rabbitmq:5672/")
+SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USER = os.getenv("SMTP_USER", "")
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
+SMTP_FROM = os.getenv("SMTP_FROM", "")
+
+def get_connection():
+    params = pika.URLParameters(RABBITMQ_URL)
+    return pika.BlockingConnection(params)
+
+def send_email(to: str, subject: str, body: str):
     msg = MIMEMultipart()
-    msg["From"] = settings.smtp_from
+    msg["From"] = SMTP_FROM
     msg["To"] = to
-    msg["Subject"] = f"Confirmación de orden - {order_id}"
-
-    items_text = "\n".join([f"   - SKU {i['sku']} | Cantidad: {i['qty']}" for i in items])
-    body = f"Hola,\n\nTu orden {order_id} fue recibida exitosamente. \n\nProductos:\n{items_text}\n\nGracias por tu compra :)"
-
+    msg["Subject"] = subject
     msg.attach(MIMEText(body, "plain"))
 
-    with smtplib.SMTP(settings.smtp_host, settings.smtp_port) as server:
+    with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
         server.starttls()
-        server.login(settings.smtp_user, settings.smtp_password)
-        server.sendmail(settings.smtp_from, to, msg.as_string())
+        server.login(SMTP_USER, SMTP_PASSWORD)
+        server.sendmail(SMTP_FROM, to, msg.as_string())
 
-async def handle_order(message: aio_pika.IncomingMessage):
-    async with message.process():
-        event = json.loads(message.body)
-        order_id = event.get("order_id")
-        customer = event.get("customer")
-        items = event.get("items", [])
+def save_notification(order_id: str, customer: str, event_type: str, message: str, reason: str = None):
+    db = SessionLocal()
+    try:
+        notification = Notification(
+            order_id=order_id,
+            customer=customer,
+            event_type=event_type,
+            message=message,
+            reason=reason,
+        )
+        db.add(notification)
+        db.commit()
+        print(f"[notification] Notificación guardada para orden {order_id}")
+    except Exception as e:
+        db.rollback()
+        print(f"[notification] Error guardando notificación: {e}")
+    finally:
+        db.close()
 
-        print(f"[notification-service] Mandando correo para orden {order_id} a {customer}")
-        try:
-            send_email(settings.smtp_user, order_id, items)
-            print(f"[notification-service] Correo enviado para orden {order_id}")
-        except Exception as e:
-            print(f"[notification-service] Error al enviar correo para orden: {e}")
+def handle_message(ch, method, properties, body):
+    event = json.loads(body)
+    order_id = event.get("order_id")
+    customer = event.get("customer", SMTP_USER)
+    routing_key = method.routing_key
 
-async def main():
-    print("notification-service iniciando...")
-    connection = await aio_pika.connect_robust(settings.rabbitmq_url)
-    channel = await connection.channel()
+    print(f"[notification] Evento recibido: {routing_key} para orden {order_id}")
 
-    exchange = await channel.declare_exchange("orders", aio_pika.ExchangeType.FANOUT, durable=True)
-    queue = await channel.declare_queue("notification_queue", durable=True)
-    await queue.bind(exchange)
+    if routing_key == "order.stock_confirmed":
+        subject = f"Orden {order_id} confirmada"
+        message = f"Hola,\n\nTu orden {order_id} fue confirmada y el stock fue reservado.\n\nGracias por tu compra :)"
+        save_notification(order_id, customer, "stock_confirmed", message)
 
-    print("Monitoreando eventos de órdenes...")
-    await queue.consume(handle_order)
-    await asyncio.Future()  # Mantener el servicio corriendo
+    elif routing_key == "order.stock_rejected":
+        reason = event.get("reason", "Stock insuficiente")
+        subject = f"Orden {order_id} rechazada"
+        message = f"Hola,\n\nLo sentimos, tu orden {order_id} fue rechazada.\n\nMotivo: {reason}\n\nIntenta de nuevo más tarde."
+        save_notification(order_id, customer, "stock_rejected", message, reason)
+
+    try:
+        send_email(SMTP_USER, subject, message)
+        print(f"[notification] Correo enviado para orden {order_id}")
+    except Exception as e:
+        print(f"[notification] Error enviando correo: {e}")
+
+    ch.basic_ack(delivery_tag=method.delivery_tag)
+
+def main():
+    print("notification-service arrancando...")
+    init_db()
+
+    connection = get_connection()
+    channel = connection.channel()
+
+    channel.exchange_declare(exchange="orders", exchange_type="topic", durable=True)
+    channel.queue_declare(queue="notification_queue", durable=True)
+    channel.queue_bind(exchange="orders", queue="notification_queue", routing_key="order.stock_confirmed")
+    channel.queue_bind(exchange="orders", queue="notification_queue", routing_key="order.stock_rejected")
+
+    print("Escuchando eventos...")
+    channel.basic_consume(queue="notification_queue", on_message_callback=handle_message, auto_ack=False)
+    channel.start_consuming()
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
