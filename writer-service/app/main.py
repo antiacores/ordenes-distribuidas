@@ -19,10 +19,6 @@ async def handle_order_created(message: aio_pika.IncomingMessage):
                     customer=event.get("customer"),
                     items=event.get("items"),
                 )
-            await r.hset(f"order:{order_id}", mapping={
-                "status": "PERSISTED",
-                "last_updated": datetime.now(timezone.utc).isoformat(),
-            })
             print(f"Orden {order_id} persistida")
         except Exception as e:
             await r.hset(f"order:{order_id}", mapping={

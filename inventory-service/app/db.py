@@ -3,9 +3,9 @@ from sqlalchemy.orm import sessionmaker
 from app.models import Base
 import os
 
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+psycopg2://orders_user:orders_pass@postgres:5432/orders_db")
+INVENTORY_DATABASE_URL = os.getenv("INVENTORY_DATABASE_URL", "postgresql+psycopg2://orders_user:orders_pass@postgres:5432/orders_db")
 
-engine = create_engine(DATABASE_URL)
+engine = create_engine(INVENTORY_DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)
 
 def init_db():
