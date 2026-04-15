@@ -114,7 +114,6 @@ services:
       rabbitmq:
         condition: service_healthy
 
-
 volumes:
   pg_data:
   pg_notifications_data:
