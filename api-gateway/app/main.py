@@ -3,11 +3,20 @@
 import uuid
 from datetime import datetime, timezone
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from app.schemas import CreateOrderRequest
 from app.redis_client import r
 from app.rabbitmq_publisher import publish_order_created
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.post("/orders", status_code=202)
 async def create_order(body: CreateOrderRequest):

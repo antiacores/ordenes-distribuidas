@@ -1,0 +1,27 @@
+# 1. Ver todos los servicios corriendo
+docker compose ps
+
+# 2. Orden exitosa
+curl -X POST http://localhost:8000/orders \
+  -H "Content-Type: application/json" \
+  -d '{"customer": "Ana García", "items": [{"sku": "CAM-BLN-M", "qty": 2}]}'
+
+# 3. Consultar estado → CONFIRMED
+curl http://localhost:8000/orders/<order_id>
+
+# 4. Orden rechazada
+curl -X POST http://localhost:8000/orders \
+  -H "Content-Type: application/json" \
+  -d '{"customer": "Luis Martínez", "items": [{"sku": "FAKE-SKU-99", "qty": 1}]}'
+
+# 5. Consultar estado → REJECTED
+curl http://localhost:8000/orders/<order_id>
+
+# 6. Ver logs en tiempo real
+docker compose logs -f inventory-service writer-service notification-service analytics-service
+
+# 7. Ver notificaciones en la BD
+docker compose exec postgres-notifications psql -U orders_user -d notifications_db -c "SELECT * FROM notifications;"
+
+# 8. RabbitMQ en el navegador
+http://localhost:15672
