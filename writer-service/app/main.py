@@ -3,7 +3,7 @@ import json
 from datetime import datetime, timezone
 import aio_pika
 from app.config import settings
-from app.db import engine, Base, AsyncSessionLocal
+from app.db import engine, Base, SessionLocal
 from app.redis_client import r
 from app.repositories.orders_repo import insert_order
 
@@ -12,8 +12,8 @@ async def handle_order_created(message: aio_pika.IncomingMessage):
         event = json.loads(message.body)
         order_id = event.get("order_id")
         try:
-            async with AsyncSessionLocal() as db:
-                await insert_order(
+            with SessionLocal() as db:
+                insert_order(
                     db,
                     order_id=order_id,
                     customer=event.get("customer"),
@@ -48,13 +48,11 @@ async def handle_stock_response(message: aio_pika.IncomingMessage):
 
 async def main():
     print("writer-service arrancando...")
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    Base.metadata.create_all(engine)
 
     connection = await aio_pika.connect_robust(settings.rabbitmq_url)
     channel = await connection.channel()
     exchange = await channel.declare_exchange("orders", aio_pika.ExchangeType.TOPIC, durable=True)
-
     # Cola para order.created
     queue_created = await channel.declare_queue("writer_order_created", durable=True)
     await queue_created.bind(exchange, routing_key="order.created")
