@@ -1,12 +1,11 @@
-## POST /orders, GET /orders/{id}
-
 import uuid
 from datetime import datetime, timezone
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from app.schemas import CreateOrderRequest
 from app.redis_client import r
 from app.rabbitmq_publisher import publish_order_created
+from app.auth import verify_token, forward_auth
 
 app = FastAPI()
 
@@ -18,8 +17,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.post("/auth/signup")
+async def signup(body: dict):
+    return await forward_auth("/auth/signup", body)
+
+@app.post("/auth/login")
+async def login(body: dict):
+    return await forward_auth("/auth/login", body)
+
+@app.post("/auth/refresh")
+async def refresh(body: dict):
+    return await forward_auth("/auth/refresh", body)
+
+@app.post("/auth/logout")
+async def logout(body: dict):
+    return await forward_auth("/auth/logout", body)
+
 @app.post("/orders", status_code=202)
-async def create_order(body: CreateOrderRequest):
+async def create_order(body: CreateOrderRequest, payload: dict = Depends(verify_token)):
     order_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
 
@@ -35,11 +50,10 @@ async def create_order(body: CreateOrderRequest):
     }
 
     await publish_order_created(event)
-
     return {"order_id": order_id, "status": "RECEIVED"}
 
 @app.get("/orders/{order_id}")
-async def get_order(order_id: str):
+async def get_order(order_id: str, payload: dict = Depends(verify_token)):
     data = await r.hgetall(f"order:{order_id}")
 
     if not data:
