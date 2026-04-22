@@ -1,0 +1,31 @@
+# Flujo Éxito
+
+curl -X POST http://localhost:8000/orders \
+-H "Content-Type: application/json" \
+-d '{
+  "customer": "demo",
+  "items": [
+    {"sku": "CAM-BLN-M", "qty": 1}
+  ]
+}'
+
+# Flujo Fallo
+curl -X POST http://localhost:8000/orders \
+-H "Content-Type: application/json" \
+-d '{
+  "customer": "demo-fail",
+  "items": [
+    {"sku": "CAM-BLN-M", "qty": 1}
+  ]
+}'
+
+#No STOCK
+curl -X POST http://localhost:8000/orders \
+-H "Content-Type: application/json" \
+-d '{
+  "customer": "no-stock",
+  "items": [
+    {"sku": "CAM-BLN-M", "qty": 999}
+  ]
+}'
+

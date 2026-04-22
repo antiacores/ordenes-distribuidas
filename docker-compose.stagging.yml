@@ -1,0 +1,26 @@
+services:
+  postgres:
+    ports:
+      - "8000:8000"
+    
+    environment:
+      LOG_LEVEL=INFO
+  
+  writer-service:
+    restart: unless-stopped
+
+  inventory-service:
+    restart: unless-stopped
+
+  notification-service:
+    restart: unless-stopped
+
+  payments-service:
+    restart: unless-stopped
+
+  analytics-service:
+    restart: unless-stopped
+
+
+
+
