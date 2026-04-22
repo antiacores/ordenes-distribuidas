@@ -92,6 +92,7 @@ def refresh(authorization: str = Header(...)):
     finally:
         db.close()
 
+#TODO: Implementar blacklist de tokens para logout real
 @app.post("/auth/logout")
 def logout():
     return {"message": "Sesión cerrada"}
