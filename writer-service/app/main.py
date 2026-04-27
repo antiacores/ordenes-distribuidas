@@ -7,6 +7,7 @@ from app.db import engine, Base, AsyncSessionLocal
 from app.redis_client import r
 from app.repositories.orders_repo import insert_order
 
+
 async def handle_order_created(message: aio_pika.IncomingMessage):
     async with message.process():
         event = json.loads(message.body)
@@ -21,11 +22,15 @@ async def handle_order_created(message: aio_pika.IncomingMessage):
                 )
             print(f"Orden {order_id} persistida")
         except Exception as e:
-            await r.hset(f"order:{order_id}", mapping={
-                "status": "FAILED",
-                "last_updated": datetime.now(timezone.utc).isoformat(),
-            })
+            await r.hset(
+                f"order:{order_id}",
+                mapping={
+                    "status": "FAILED",
+                    "last_updated": datetime.now(timezone.utc).isoformat(),
+                },
+            )
             print(f"Error persistiendo orden {order_id}: {e}")
+
 
 async def handle_stock_response(message: aio_pika.IncomingMessage):
     async with message.process():
@@ -34,17 +39,24 @@ async def handle_stock_response(message: aio_pika.IncomingMessage):
         routing_key = message.routing_key
 
         if routing_key == "order.stock_confirmed":
-            await r.hset(f"order:{order_id}", mapping={
-                "status": "CONFIRMED",
-                "last_updated": datetime.now(timezone.utc).isoformat(),
-            })
+            await r.hset(
+                f"order:{order_id}",
+                mapping={
+                    "status": "CONFIRMED",
+                    "last_updated": datetime.now(timezone.utc).isoformat(),
+                },
+            )
             print(f"Stock confirmado para orden {order_id}")
         elif routing_key == "order.stock_rejected":
-            await r.hset(f"order:{order_id}", mapping={
-                "status": "REJECTED",
-                "last_updated": datetime.now(timezone.utc).isoformat(),
-            })
+            await r.hset(
+                f"order:{order_id}",
+                mapping={
+                    "status": "REJECTED",
+                    "last_updated": datetime.now(timezone.utc).isoformat(),
+                },
+            )
             print(f"Stock rechazado para orden {order_id}")
+
 
 async def main():
     print("writer-service arrancando...")
@@ -53,7 +65,9 @@ async def main():
 
     connection = await aio_pika.connect_robust(settings.rabbitmq_url)
     channel = await connection.channel()
-    exchange = await channel.declare_exchange("orders", aio_pika.ExchangeType.TOPIC, durable=True)
+    exchange = await channel.declare_exchange(
+        "orders", aio_pika.ExchangeType.TOPIC, durable=True
+    )
 
     queue_created = await channel.declare_queue("writer_order_created", durable=True)
     await queue_created.bind(exchange, routing_key="order.created")
@@ -66,6 +80,7 @@ async def main():
 
     print("Escuchando eventos...")
     await asyncio.Future()
+
 
 if __name__ == "__main__":
     asyncio.run(main())

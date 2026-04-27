@@ -6,10 +6,11 @@ import os
 JWT_SECRET = os.getenv("JWT_SECRET", "")
 AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://auth-service:8002")
 
+
 async def verify_token(authorization: str = Header(...)):
     if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Token inválido")
-    
+
     token = authorization.replace("Bearer ", "")
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
@@ -17,10 +18,11 @@ async def verify_token(authorization: str = Header(...)):
     except JWTError:
         raise HTTPException(status_code=401, detail="Token inválido o expirado")
 
+
 async def verify_admin(authorization: str = Header(...)):
     if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Token inválido")
-    
+
     token = authorization.replace("Bearer ", "")
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
@@ -29,7 +31,8 @@ async def verify_admin(authorization: str = Header(...)):
         return payload
     except JWTError:
         raise HTTPException(status_code=401, detail="Token inválido o expirado")
-    
+
+
 async def forward_auth(path: str, body: dict, headers: dict = None) -> dict:
     async with httpx.AsyncClient() as client:
         response = await client.post(

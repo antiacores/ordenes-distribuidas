@@ -4,6 +4,7 @@ from pydantic_settings import BaseSettings
 import os
 from urllib.parse import urlsplit, urlunsplit
 
+
 def normalize_database_url(raw_url, driver="asyncpg"):
     normalized = raw_url.strip()
 
@@ -12,9 +13,13 @@ def normalize_database_url(raw_url, driver="asyncpg"):
     if normalized.startswith("postgresql://"):
         normalized = normalized.replace("postgresql://", f"postgresql+{driver}://", 1)
     if normalized.startswith("postgresql+psycopg2://"):
-        normalized = normalized.replace("postgresql+psycopg2://", f"postgresql+{driver}://", 1)
+        normalized = normalized.replace(
+            "postgresql+psycopg2://", f"postgresql+{driver}://", 1
+        )
     if normalized.startswith("postgresql+asyncpg://"):
-        normalized = normalized.replace("postgresql+asyncpg://", f"postgresql+{driver}://", 1)
+        normalized = normalized.replace(
+            "postgresql+asyncpg://", f"postgresql+{driver}://", 1
+        )
 
     parts = urlsplit(normalized)
     db_name = parts.path.lstrip("/")
@@ -23,7 +28,13 @@ def normalize_database_url(raw_url, driver="asyncpg"):
     if db_name.endswith("}") and "{" not in db_name:
         cleaned_name = db_name.rstrip("}")
         normalized = urlunsplit(
-            (parts.scheme, parts.netloc, f"/{cleaned_name}", parts.query, parts.fragment)
+            (
+                parts.scheme,
+                parts.netloc,
+                f"/{cleaned_name}",
+                parts.query,
+                parts.fragment,
+            )
         )
         parts = urlsplit(normalized)
         db_name = parts.path.lstrip("/")
@@ -36,9 +47,17 @@ def normalize_database_url(raw_url, driver="asyncpg"):
 
     return normalized
 
+
 class Settings(BaseSettings):
-    database_url: str = normalize_database_url(os.getenv("DATABASE_URL", "postgresql://orders_user:orders_pass@postgres:5432/orders_db"), "asyncpg")
+    database_url: str = normalize_database_url(
+        os.getenv(
+            "DATABASE_URL",
+            "postgresql://orders_user:orders_pass@postgres:5432/orders_db",
+        ),
+        "asyncpg",
+    )
     redis_url: str = "redis://redis:6379/0"
     rabbitmq_url: str = "amqp://guest:guest@rabbitmq:5672/"
+
 
 settings = Settings()

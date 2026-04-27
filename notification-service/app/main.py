@@ -14,9 +14,11 @@ SMTP_USER = os.getenv("SMTP_USER", "")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
 SMTP_FROM = os.getenv("SMTP_FROM", "")
 
+
 def get_connection():
     params = pika.URLParameters(RABBITMQ_URL)
     return pika.BlockingConnection(params)
+
 
 def send_email(to: str, subject: str, body: str):
     msg = MIMEMultipart()
@@ -30,7 +32,10 @@ def send_email(to: str, subject: str, body: str):
         server.login(SMTP_USER, SMTP_PASSWORD)
         server.sendmail(SMTP_FROM, to, msg.as_string())
 
-def save_notification(order_id: str, customer: str, event_type: str, message: str, reason: str = None):
+
+def save_notification(
+    order_id: str, customer: str, event_type: str, message: str, reason: str = None
+):
     db = SessionLocal()
     try:
         notification = Notification(
@@ -48,6 +53,7 @@ def save_notification(order_id: str, customer: str, event_type: str, message: st
         print(f"[notification] Error guardando notificación: {e}")
     finally:
         db.close()
+
 
 def handle_message(ch, method, properties, body):
     event = json.loads(body)
@@ -76,6 +82,7 @@ def handle_message(ch, method, properties, body):
 
     ch.basic_ack(delivery_tag=method.delivery_tag)
 
+
 def main():
     print("notification-service arrancando...")
     init_db()
@@ -85,12 +92,23 @@ def main():
 
     channel.exchange_declare(exchange="orders", exchange_type="topic", durable=True)
     channel.queue_declare(queue="notification_queue", durable=True)
-    channel.queue_bind(exchange="orders", queue="notification_queue", routing_key="order.stock_confirmed")
-    channel.queue_bind(exchange="orders", queue="notification_queue", routing_key="order.stock_rejected")
+    channel.queue_bind(
+        exchange="orders",
+        queue="notification_queue",
+        routing_key="order.stock_confirmed",
+    )
+    channel.queue_bind(
+        exchange="orders",
+        queue="notification_queue",
+        routing_key="order.stock_rejected",
+    )
 
     print("Escuchando eventos...")
-    channel.basic_consume(queue="notification_queue", on_message_callback=handle_message, auto_ack=False)
+    channel.basic_consume(
+        queue="notification_queue", on_message_callback=handle_message, auto_ack=False
+    )
     channel.start_consuming()
+
 
 if __name__ == "__main__":
     main()

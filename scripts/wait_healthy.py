@@ -7,8 +7,7 @@ print("Esperando a que los servicios estén saludables...")
 
 for _ in range(24):  # 24 intentos x 5 segundos = 120 segundos max
     result = subprocess.run(
-        ["docker", "compose", "ps", "--format", "json"],
-        capture_output=True, text=True
+        ["docker", "compose", "ps", "--format", "json"], capture_output=True, text=True
     )
     services = [json.loads(line) for line in result.stdout.strip().split("\n") if line]
     unhealthy = [s["Name"] for s in services if s.get("Health") not in ("healthy", "")]

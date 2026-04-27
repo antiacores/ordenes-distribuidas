@@ -1,4 +1,4 @@
-""" Modelos ORM de SQLAlchemy para las notificaciones. """
+"""Modelos ORM de SQLAlchemy para las notificaciones."""
 
 from __future__ import annotations
 
@@ -7,8 +7,10 @@ from datetime import datetime, timezone
 from sqlalchemy import DateTime, Integer, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
+
 class Base(DeclarativeBase):
     pass
+
 
 class Notification(Base):
     __tablename__ = "notifications"

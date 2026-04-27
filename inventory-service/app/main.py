@@ -6,9 +6,11 @@ import os
 
 RABBITMQ_URL = os.getenv("RABBITMQ_URL", "amqp://guest:guest@rabbitmq:5672/")
 
+
 def get_connection():
     params = pika.URLParameters(RABBITMQ_URL)
     return pika.BlockingConnection(params)
+
 
 def publish_event(channel, routing_key: str, event: dict):
     channel.basic_publish(
@@ -17,6 +19,7 @@ def publish_event(channel, routing_key: str, event: dict):
         body=json.dumps(event).encode(),
         properties=pika.BasicProperties(delivery_mode=2),
     )
+
 
 def handle_order(ch, method, properties, body):
     event = json.loads(body)
@@ -34,12 +37,16 @@ def handle_order(ch, method, properties, body):
             if not product or product.stock < item["qty"]:
                 print(f"[inventory] Stock insuficiente para SKU {item['sku']}")
 
-                publish_event(ch, "order.stock_rejected", {
-                    "order_id": order_id,
-                    "reason": f"Stock insuficiente para SKU {item['sku']}"
-                })
+                publish_event(
+                    ch,
+                    "order.stock_rejected",
+                    {
+                        "order_id": order_id,
+                        "reason": f"Stock insuficiente para SKU {item['sku']}",
+                    },
+                )
 
-                ch.basic_ack(delivery_tag=method.delivery_tag)  
+                ch.basic_ack(delivery_tag=method.delivery_tag)
                 return
 
         # Descontar stock
@@ -51,18 +58,17 @@ def handle_order(ch, method, properties, body):
 
         print(f"[inventory] Stock descontado para orden {order_id}")
 
-        publish_event(ch, "order.stock_confirmed", {
-            "order_id": order_id
-        })
+        publish_event(ch, "order.stock_confirmed", {"order_id": order_id})
 
-        ch.basic_ack(delivery_tag=method.delivery_tag) 
+        ch.basic_ack(delivery_tag=method.delivery_tag)
 
     except Exception as e:
         print("Error en inventory:", e)
 
         db.rollback()
 
-        ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)  
+        ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+
 
 def main():
     print("inventory-service arrancando...")
@@ -73,11 +79,16 @@ def main():
 
     channel.exchange_declare(exchange="orders", exchange_type="topic", durable=True)
     channel.queue_declare(queue="inventory_queue", durable=True)
-    channel.queue_bind(exchange="orders", queue="inventory_queue", routing_key="order.created")
+    channel.queue_bind(
+        exchange="orders", queue="inventory_queue", routing_key="order.created"
+    )
 
     print("Escuchando eventos de órdenes...")
-    channel.basic_consume(queue="inventory_queue", on_message_callback=handle_order, auto_ack=False)
+    channel.basic_consume(
+        queue="inventory_queue", on_message_callback=handle_order, auto_ack=False
+    )
     channel.start_consuming()
+
 
 if __name__ == "__main__":
     main()

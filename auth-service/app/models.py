@@ -1,8 +1,10 @@
 from sqlalchemy import String, Integer
 from sqlalchemy.orm import Mapped, mapped_column, DeclarativeBase
 
+
 class Base(DeclarativeBase):
     pass
+
 
 class Users(Base):
     __tablename__ = "users"

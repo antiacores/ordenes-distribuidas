@@ -4,6 +4,7 @@ from app.models import Base
 import os
 from urllib.parse import urlsplit, urlunsplit
 
+
 def normalize_database_url(raw_url, driver="asyncpg"):
     normalized = raw_url.strip()
 
@@ -12,9 +13,13 @@ def normalize_database_url(raw_url, driver="asyncpg"):
     if normalized.startswith("postgresql://"):
         normalized = normalized.replace("postgresql://", f"postgresql+{driver}://", 1)
     if normalized.startswith("postgresql+psycopg2://"):
-        normalized = normalized.replace("postgresql+psycopg2://", f"postgresql+{driver}://", 1)
+        normalized = normalized.replace(
+            "postgresql+psycopg2://", f"postgresql+{driver}://", 1
+        )
     if normalized.startswith("postgresql+asyncpg://"):
-        normalized = normalized.replace("postgresql+asyncpg://", f"postgresql+{driver}://", 1)
+        normalized = normalized.replace(
+            "postgresql+asyncpg://", f"postgresql+{driver}://", 1
+        )
 
     parts = urlsplit(normalized)
     db_name = parts.path.lstrip("/")
@@ -23,7 +28,13 @@ def normalize_database_url(raw_url, driver="asyncpg"):
     if db_name.endswith("}") and "{" not in db_name:
         cleaned_name = db_name.rstrip("}")
         normalized = urlunsplit(
-            (parts.scheme, parts.netloc, f"/{cleaned_name}", parts.query, parts.fragment)
+            (
+                parts.scheme,
+                parts.netloc,
+                f"/{cleaned_name}",
+                parts.query,
+                parts.fragment,
+            )
         )
         parts = urlsplit(normalized)
         db_name = parts.path.lstrip("/")
@@ -36,16 +47,25 @@ def normalize_database_url(raw_url, driver="asyncpg"):
 
     return normalized
 
-INVENTORY_DATABASE_URL = normalize_database_url(os.getenv("INVENTORY_DATABASE_URL", "postgresql://orders_user:orders_pass@postgres:5432/orders_db"), "psycopg2")
+
+INVENTORY_DATABASE_URL = normalize_database_url(
+    os.getenv(
+        "INVENTORY_DATABASE_URL",
+        "postgresql://orders_user:orders_pass@postgres:5432/orders_db",
+    ),
+    "psycopg2",
+)
 
 engine = create_engine(INVENTORY_DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)
+
 
 def init_db():
     Base.metadata.create_all(engine)
 
     with SessionLocal() as db:
         from app.models import Product
+
         if not db.query(Product).first():
             products = [
                 Product(sku="CAM-BLN-M", name="Camisa blanca talla M", stock=50),
