@@ -36,7 +36,7 @@ def normalize_database_url(raw_url, driver="asyncpg"):
 
     return normalized
 
-DATABASE_URL = normalize_database_url(os.getenv("NOTIFICATIONS_DATABASE_URL", "postgresql://orders_user:orders_pass@postgres-notifications:5433/notifications_db"), "psycopg2")
+DATABASE_URL = normalize_database_url(os.getenv("AUTH_DATABASE_URL", "postgresql://orders_user:orders_pass@postgres-auth:5433/auth_db"), "psycopg2")
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)

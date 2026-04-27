@@ -27,37 +27,42 @@ def handle_order(ch, method, properties, body):
 
     db = SessionLocal()
     try:
-        # Verificar si hay stock suficiente para todos los items
+        # Verificar stock
         for item in items:
             product = db.query(Product).filter(Product.sku == item["sku"]).first()
+
             if not product or product.stock < item["qty"]:
                 print(f"[inventory] Stock insuficiente para SKU {item['sku']}")
+
                 publish_event(ch, "order.stock_rejected", {
                     "order_id": order_id,
                     "reason": f"Stock insuficiente para SKU {item['sku']}"
                 })
-                ch.basic_ack(delivery_tag=method.delivery_tag)
+
+                ch.basic_ack(delivery_tag=method.delivery_tag)  
                 return
 
-        # Si hay stock, descontarlo
+        # Descontar stock
         for item in items:
             product = db.query(Product).filter(Product.sku == item["sku"]).first()
             product.stock -= item["qty"]
+
         db.commit()
 
         print(f"[inventory] Stock descontado para orden {order_id}")
-        publish_event(ch, "order.stock_confirmed", {"order_id": order_id})
+
+        publish_event(ch, "order.stock_confirmed", {
+            "order_id": order_id
+        })
+
+        ch.basic_ack(delivery_tag=method.delivery_tag) 
 
     except Exception as e:
+        print("Error en inventory:", e)
+
         db.rollback()
-        print(f"[inventory] Error procesando orden {order_id}: {e}")
-        publish_event(ch, "order.stock_rejected", {
-            "order_id": order_id,
-            "reason": str(e)
-        })
-    finally:
-        db.close()
-        ch.basic_ack(delivery_tag=method.delivery_tag)
+
+        ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)  
 
 def main():
     print("inventory-service arrancando...")
