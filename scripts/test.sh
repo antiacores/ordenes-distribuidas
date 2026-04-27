@@ -117,7 +117,7 @@ STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST $BASE_URL/auth/signup/ad
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{"username":"hacker","email":"hacker@test.com","name":"Hacker","password":"123456"}')
-check_status "Signup admin sin ser admin (debe fallar)" 500 $STATUS
+check_status "Signup admin sin ser admin (debe fallar)" 403 $STATUS
 
 # ------------------------------------------------------------
 # 9. Token inválido
