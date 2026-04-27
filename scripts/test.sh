@@ -29,6 +29,18 @@ check_status() {
     fi
 }
 
+# Esperar a que el api-gateway esté listo
+echo "Esperando a que el api-gateway esté listo..."
+for i in $(seq 1 20); do
+    STATUS=$(curl -s -o /dev/null -w "%{http_code}" $BASE_URL/auth/signup || echo "000")
+    if [ "$STATUS" != "000" ]; then
+        echo "API Gateway listo."
+        break
+    fi
+    echo "Intento $i/20 — esperando 5s..."
+    sleep 5
+done
+
 echo "============================================================"
 echo "Corriendo pruebas de integración..."
 echo "============================================================"
