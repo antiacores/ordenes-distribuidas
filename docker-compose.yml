@@ -29,6 +29,21 @@ services:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d notifications_db"]
       interval: 5s
       retries: 5
+  
+  postgres-auth:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: auth_db
+    ports:
+      - "5434:5432"
+    volumes:
+      - pg_auth_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d auth_db"]
+      interval: 5s
+      retries: 5
 
   redis:
     image: redis:7-alpine
@@ -130,3 +145,4 @@ services:
 volumes:
   pg_data:
   pg_notifications_data:
+  pg_auth_data:
