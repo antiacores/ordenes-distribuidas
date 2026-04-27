@@ -32,9 +32,11 @@ check_status() {
 # Esperar a que el api-gateway esté listo
 echo "Esperando a que el api-gateway esté listo..."
 for i in $(seq 1 20); do
-    STATUS=$(curl -s -o /dev/null -w "%{http_code}" $BASE_URL/auth/signup || echo "000")
-    if [ "$STATUS" != "000" ]; then
-        echo "API Gateway listo."
+    STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST $BASE_URL/auth/signup \
+      -H "Content-Type: application/json" \
+      -d '{"username":"ping","email":"ping@ping.com","name":"ping","password":"ping"}' || echo "000")
+    if [ "$STATUS" != "000" ] && [ "$STATUS" != "52" ]; then
+        echo "API Gateway listo (HTTP $STATUS)."
         break
     fi
     echo "Intento $i/20 — esperando 5s..."
