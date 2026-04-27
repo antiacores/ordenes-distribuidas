@@ -27,8 +27,17 @@ jobs:
     
       - name: Check services status
         run: |
+          echo "Esperando a que api-gateway esté healthy..."
+          for i in $(seq 1 20); do
+            STATUS=$(docker inspect --format='{{.State.Health.Status}}' ordenes-distribuidas-api-gateway-1 2>/dev/null || echo "none")
+            echo "api-gateway health: $STATUS"
+            if [ "$STATUS" = "healthy" ]; then
+              echo "api-gateway listo."
+              break
+            fi
+            sleep 5
+          done
           docker compose ps
-          docker compose logs api-gateway --tail=20
 
       - name: Run integration tests
         run: |
